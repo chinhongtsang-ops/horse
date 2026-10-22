@@ -1,0 +1,39 @@
+name: HKJC Auto Scraper
+
+on:
+  # 1. 允許隨時手動/網頁觸發爬蟲
+  workflow_dispatch:
+  
+  # 2. 自動定時排程：每日香港時間早上 09:00 及下午 14:00 自動去馬會爬最新排位 (UTC 01:00 及 06:00)
+  schedule:
+    - cron: '0 1,6 * * *'
+
+permissions:
+  contents: write
+
+jobs:
+  scrape:
+    runs-on: ubuntu-latest
+    steps:
+      - name: 1. 下載 GitHub 倉庫代碼
+        uses: actions/checkout@v4
+
+      - name: 2. 安裝 Python 環境
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: 3. 安裝 Playwright 及爬蟲套件
+        run: |
+          pip install playwright beautifulsoup4
+          playwright install --with-deps chromium
+
+      - name: 4. 執行馬會排位、往績及晨課爬蟲
+        run: python hkjc_scraper.py
+
+      - name: 5. 自動將最新 race_data.json 儲存並推上 GitHub
+        run: |
+          git config --global user.name "GitHub Auto Scraper"
+          git config --global user.email "actions@github.com"
+          git add race_data.json
+          git diff --quiet && git diff --staged --quiet || (git commit -m "⚡ 自動更新馬會最新排位數據" && git push)
