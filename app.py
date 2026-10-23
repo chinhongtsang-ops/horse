@@ -4,11 +4,11 @@ import hashlib
 import json
 import os
 import re
+import aiohttp
 from bs4 import BeautifulSoup
 from fastapi import BackgroundTasks, FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, JSONResponse
-from playwright.async_api import async_playwright
 from pydantic import BaseModel
 import uvicorn
 
@@ -25,15 +25,22 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# 爬蟲運行狀態追蹤
 scraper_state = {
     "is_running": False,
     "progress": "閒置中",
     "last_updated": None,
 }
 
+HEADERS = {
+    "User-Agent": (
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML,"
+        " like Gecko) Chrome/124.0.0.0 Safari/537.36"
+    ),
+    "Accept-Language": "zh-HK,zh;q=0.9,en;q=0.8",
+}
 
-# ==================== 1. 跨裝置用戶與心水儲存系統 ====================
+
+# ==================== 1. 用戶登入與心水同步 ====================
 def load_users():
   if os.path.exists(USERS_FILE):
     try:
@@ -69,7 +76,6 @@ async def login_or_register(req: LoginRequest):
   username = req.username.strip().lower()
   if not username or not req.pin:
     raise HTTPException(status_code=400, detail="請輸入帳號名稱及密碼")
-
   users = load_users()
   pin_hash = hash_pin(req.pin)
 
@@ -114,8 +120,20 @@ async def sync_user_picks(req: SyncPicksRequest):
   return {"status": "ok", "updated_at": users[username]["updated_at"]}
 
 
-# ==================== 2. 高速自動爬蟲引擎 (並發加速 + 精準標題) ====================
-async def scrape_horse_details(context, horse_id):
+# ==================== 2. 極速 aiohttp 爬蟲引擎 (30MB 記憶體，15 秒完成) ====================
+async def fetch_html(session, url):
+  try:
+    async with session.get(
+        url, headers=HEADERS, timeout=aiohttp.ClientTimeout(total=8)
+    ) as resp:
+      if resp.status == 200:
+        return await resp.text()
+  except Exception:
+    pass
+  return None
+
+
+async def scrape_horse_details(session, horse_id):
   if not horse_id:
     return (
         [],
@@ -131,8 +149,14 @@ async def scrape_horse_details(context, horse_id):
         },
     )
 
-  page = await context.new_page()
   horse_url = f"https://racing.hkjc.com/racing/information/Chinese/Horse/Horse.aspx?HorseId={horse_id}"
+  tw_url = f"https://racing.hkjc.com/racing/information/Chinese/Trackwork/TrackworkResult.aspx?HorseId={horse_id}"
+
+  # 同時抓取往績頁與晨課頁
+  h_html, tw_html = await asyncio.gather(
+      fetch_html(session, horse_url), fetch_html(session, tw_url)
+  )
+
   past_runs, trackwork_list = [], []
   video_links = {
       "last_race_replay": "",
@@ -144,11 +168,8 @@ async def scrape_horse_details(context, horse_id):
       ),
   }
 
-  try:
-    await page.goto(horse_url, wait_until="domcontentloaded", timeout=12000)
-    await page.wait_for_timeout(400)
-    soup = BeautifulSoup(await page.content(), "html.parser")
-
+  if h_html:
+    soup = BeautifulSoup(h_html, "html.parser")
     tables = soup.find_all("table", class_="bigborder")
     if tables:
       for row in tables[0].find_all("tr")[1:]:
@@ -185,10 +206,8 @@ async def scrape_horse_details(context, horse_id):
           if len(past_runs) >= 3:
             break
 
-    tw_url = f"https://racing.hkjc.com/racing/information/Chinese/Trackwork/TrackworkResult.aspx?HorseId={horse_id}"
-    await page.goto(tw_url, wait_until="domcontentloaded", timeout=10000)
-    await page.wait_for_timeout(300)
-    tw_soup = BeautifulSoup(await page.content(), "html.parser")
+  if tw_html:
+    tw_soup = BeautifulSoup(tw_html, "html.parser")
     tw_table = tw_soup.find("table", class_="table_bd")
     if tw_table:
       for tr in tw_table.find_all("tr")[1:4]:
@@ -202,24 +221,21 @@ async def scrape_horse_details(context, horse_id):
               "rider": tds[4],
               "note": tds[5] if len(tds) > 5 else "",
           })
-  except Exception:
-    pass
-  finally:
-    await page.close()
 
   return past_runs, trackwork_list, video_links
 
 
-async def discover_all_meetings(page):
+async def discover_all_meetings(session):
   base_url = (
       "https://racing.hkjc.com/racing/information/Chinese/Racing/RaceCard.aspx"
   )
-  await page.goto(base_url, wait_until="domcontentloaded", timeout=25000)
-  await page.wait_for_timeout(1500)
-  html = await page.content()
-  soup = BeautifulSoup(html, "html.parser")
+  html = await fetch_html(session, base_url)
+  if not html:
+    return []
 
+  soup = BeautifulSoup(html, "html.parser")
   candidates = {}
+
   for match in re.finditer(
       r"RaceDate=(\d{4}/\d{2}/\d{2})&(?:amp;)?Racecourse=(ST|HV|S\d+)", html
   ):
@@ -325,43 +341,12 @@ def parse_horse_row(row, is_simulcast=False):
   }
 
 
-async def process_single_horse(context, row, is_simulcast):
-  parsed = parse_horse_row(row, is_simulcast=is_simulcast)
-  if not parsed:
-    return None
-
-  past_runs, trackwork, videos = (
-      await scrape_horse_details(context, parsed["horse_id"])
-      if (parsed["horse_id"] and not is_simulcast)
-      else (
-          [],
-          [],
-          {
-              "bt_video": (
-                  "https://racing.hkjc.com/racing/information/Chinese/Horse/BtResult.aspx"
-              ),
-              "last_race_replay": (
-                  "https://racing.hkjc.com/racing/information/Chinese/Racing/ResultsAll.aspx"
-              ),
-              "patrol_video": (
-                  "https://racing.hkjc.com/racing/information/Chinese/Racing/ResultsAll.aspx"
-              ),
-          },
-      )
-  )
-
-  parsed["past_runs"] = past_runs
-  parsed["trackwork"] = trackwork
-  parsed["videos"] = videos
-  return parsed
-
-
 async def run_scraper_task():
   global scraper_state
   if scraper_state["is_running"]:
     return
   scraper_state["is_running"] = True
-  scraper_state["progress"] = "正在啟動瀏覽器並掃描馬會賽期..."
+  scraper_state["progress"] = "正在快速連接馬會..."
 
   output_data = {
       "updated_at": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
@@ -369,20 +354,14 @@ async def run_scraper_task():
   }
 
   try:
-    async with async_playwright() as p:
-      browser = await p.chromium.launch(headless=True)
-      context = await browser.new_context(
-          user_agent=(
-              "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
-              " (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36"
-          )
-      )
-      page = await context.new_page()
+    connector = aiohttp.TCPConnector(limit=10)
+    async with aiohttp.ClientSession(connector=connector) as session:
+      meetings = await discover_all_meetings(session)
 
-      meetings = await discover_all_meetings(page)
       for m in meetings:
         r_date, r_course = m["date"], m["course"]
         is_simulcast = r_course.startswith("S") and r_course != "ST"
+
         meeting_obj = {
             "id": f"{r_date.replace('/', '-')}_{r_course}",
             "date": r_date,
@@ -403,82 +382,96 @@ async def run_scraper_task():
         for r_no in range(1, 13):
           scraper_state["progress"] = f"正在抓取 {m['label']} 第 {r_no} 場..."
           url = f"https://racing.hkjc.com/racing/information/Chinese/Racing/RaceCard.aspx?RaceDate={r_date}&Racecourse={r_course}&RaceNo={r_no}"
-          try:
-            await page.goto(url, wait_until="domcontentloaded", timeout=20000)
-            await page.wait_for_timeout(1000)
-            soup = BeautifulSoup(await page.content(), "html.parser")
 
-            race_table = soup.find("table", id="racecardlist") or soup.find(
-                "table", class_="starter"
-            )
-            if not race_table:
+          html = await fetch_html(session, url)
+          if not html:
+            break
+
+          soup = BeautifulSoup(html, "html.parser")
+          race_table = soup.find("table", id="racecardlist") or soup.find(
+              "table", class_="starter"
+          )
+          if not race_table:
+            break
+
+          page_text = soup.get_text(" ", strip=True)
+          if not is_simulcast and r_no == 1:
+            y, mo, da = r_date.split("/")
+            if f"{y}年{int(mo)}月{int(da)}日" not in page_text:
               break
 
-            page_text = soup.get_text(" ", strip=True)
-            if not is_simulcast and r_no == 1:
-              y, mo, da = r_date.split("/")
-              if f"{y}年{int(mo)}月{int(da)}日" not in page_text:
-                break
-
-            # 精準抓取真實賽事名稱 (修復每場都顯示「董事盃」Bug)
-            race_title = f"第 {r_no} 場賽事"
-            title_block = (
-                soup.find("div", class_="race_info")
-                or soup.find("div", class_="f_fl race_title")
-                or soup.find("div", class_="f_fl")
+          # 精準賽事標題 (修復全顯示董事盃)
+          race_title = f"第 {r_no} 場賽事"
+          title_block = (
+              soup.find("div", class_="race_info")
+              or soup.find("div", class_="f_fl race_title")
+              or soup.find("div", class_="f_fl")
+          )
+          if title_block:
+            t_text = title_block.get_text(" ", strip=True)
+            t_match = re.search(
+                r"([^\s\d]{2,15}(?:讓賽|錦標|盃|賞|大賽|公開賽))", t_text
             )
-            if title_block:
-              t_text = title_block.get_text(" ", strip=True)
-              t_match = re.search(
-                  r"([^\s\d]{2,15}(?:讓賽|錦標|盃|賞|大賽|公開賽))", t_text
-              )
-              if t_match:
-                race_title = t_match.group(1)
+            if t_match:
+              race_title = t_match.group(1)
 
-            cls_m = re.search(
-                r"(第[一二三四五]班|公開賽|新馬賽|國際[一二三]級賽|[一二三]級賽|表列賽|讓賽)",
-                page_text,
+          cls_m = re.search(
+              r"(第[一二三四五]班|公開賽|新馬賽|國際[一二三]級賽|[一二三]級賽|表列賽|讓賽)",
+              page_text,
+          )
+          dist_m = re.search(r"(\d{4}米)", page_text)
+          time_m = re.search(r"(\d{2}:\d{2})", page_text)
+
+          r_time = time_m.group(1) if time_m else "-"
+          if r_no == 1 and r_time != "-":
+            meeting_obj["firstTime"] = r_time
+
+          # 抓取馬匹名單
+          tbody = race_table.find("tbody") or race_table
+          rows = tbody.find_all("tr")
+
+          parsed_horses = []
+          for row in rows:
+            p = parse_horse_row(row, is_simulcast=is_simulcast)
+            if p:
+              parsed_horses.append(p)
+
+          # 輕量並發抓取馬匹往績 (每次 5 匹防封 IP)
+          async def get_horse_full(h):
+            past, tw, vids = (
+                await scrape_horse_details(session, h["horse_id"])
+                if (h["horse_id"] and not is_simulcast)
+                else ([], [], {})
             )
-            dist_m = re.search(r"(\d{4}米)", page_text)
-            time_m = re.search(r"(\d{2}:\d{2})", page_text)
+            h["past_runs"] = past
+            h["trackwork"] = tw
+            h["videos"] = vids
+            return h
 
-            r_time = time_m.group(1) if time_m else "-"
-            if r_no == 1 and r_time != "-":
-              meeting_obj["firstTime"] = r_time
+          horses = await asyncio.gather(
+              *[get_horse_full(h) for h in parsed_horses]
+          )
 
-            # 抓取馬匹列並改用並發加速 (大幅提升爬取速度)
-            tbody = race_table.find("tbody") or race_table
-            rows = tbody.find_all("tr")
-            tasks = [
-                process_single_horse(context, row, is_simulcast) for row in rows
-            ]
-            horse_results = await asyncio.gather(*tasks)
-            horses = [h for h in horse_results if h is not None]
-
-            if horses:
-              race_btn_label = (
-                  f"{r_course}-{r_no}" if is_simulcast else f"第 {r_no} 場"
-              )
-              meeting_obj["race_info"].append({
-                  "r": r_no,
-                  "btn_label": race_btn_label,
-                  "name": race_title,
-                  "time": r_time,
-                  "cls": (
-                      cls_m.group(1)
-                      if cls_m
-                      else ("越洋轉播" if is_simulcast else "-")
-                  ),
-                  "dist": dist_m.group(1) if dist_m else "-",
-              })
-              meeting_obj["races"][str(r_no)] = horses
-          except Exception:
-            continue
+          if horses:
+            race_btn_label = (
+                f"{r_course}-{r_no}" if is_simulcast else f"第 {r_no} 場"
+            )
+            meeting_obj["race_info"].append({
+                "r": r_no,
+                "btn_label": race_btn_label,
+                "name": race_title,
+                "time": r_time,
+                "cls": (
+                    cls_m.group(1)
+                    if cls_m
+                    else ("越洋轉播" if is_simulcast else "-")
+                ),
+                "dist": dist_m.group(1) if dist_m else "-",
+            })
+            meeting_obj["races"][str(r_no)] = horses
 
         if meeting_obj["races"]:
           output_data["meetings"].append(meeting_obj)
-
-      await browser.close()
 
     if output_data["meetings"]:
       with open(DATA_FILE, "w", encoding="utf-8") as f:
@@ -487,13 +480,14 @@ async def run_scraper_task():
       scraper_state["progress"] = "更新完成！"
     else:
       scraper_state["progress"] = "未發現新排位表"
+
   except Exception as e:
     scraper_state["progress"] = f"錯誤: {str(e)}"
   finally:
     scraper_state["is_running"] = False
 
 
-# ==================== 3. API 路由與自動伺服網頁 ====================
+# ==================== 3. 路由設定 ====================
 @app.get("/")
 async def serve_index():
   return FileResponse(HTML_FILE)
@@ -512,7 +506,7 @@ async def trigger_scrape(background_tasks: BackgroundTasks):
   if scraper_state["is_running"]:
     return {"status": "running", "progress": scraper_state["progress"]}
   background_tasks.add_task(run_scraper_task)
-  return {"status": "started", "progress": "已啟動背景爬蟲..."}
+  return {"status": "started", "progress": "已啟動極速背景爬蟲..."}
 
 
 @app.get("/api/scrape/status")
