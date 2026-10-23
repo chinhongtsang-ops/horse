@@ -379,6 +379,57 @@
       const raceInfo = cur.race_info.find(r => r.r === currentRace) || cur.race_info[0] || { r: currentRace, name: "賽事", time: "-", cls: "-", dist: "-" };
       const horses = cur.races[String(currentRace)] || [];
       const raceTag = raceInfo.btn_label || `第 ${raceInfo.r} 場`;
+      // 在 index.html 中替換原本的馬匹卡片內部 HTML
+const ana = h.analysis || { style: "均速", dist_apt: "一般", track_apt: "草地", summary: "" };
+
+return `
+<div id="horse-card-${idx}" class="glass-card rounded-xl p-3 border transition ${h.pick === '◎' ? 'border-rose-500/80 shadow-lg' : h.pick === '▲' ? 'border-amber-500/80' : 'border-slate-800'}">
+  
+  <!-- 基本資料列 -->
+  <div class="flex justify-between items-start">
+    <div class="flex items-center space-x-2">
+      <span class="w-6 h-6 rounded-full bg-slate-800 text-white font-black text-xs flex items-center justify-center border border-slate-600 shrink-0">${h.no}</span>
+      <div>
+        <div class="flex items-center gap-1.5 flex-wrap">
+          <h3 class="font-black text-sm text-white">${h.name}</h3>
+          ${h.draw && h.draw !== '-' ? `<span class="text-[10px] bg-slate-800 text-emerald-300 px-1 py-0.2 rounded border border-slate-700">${h.draw}檔</span>` : ''}
+          ${h.gear ? `<span class="text-[9px] bg-purple-500/20 text-purple-300 px-1 py-0.2 rounded">${h.gear}</span>` : ''}
+        </div>
+        <p class="text-[11px] text-slate-400 mt-0.5">
+          騎：<strong class="text-slate-200">${h.jockey}</strong> (${h.wt}磅) · 練：${h.trainer} · 評分：${h.rtg}
+        </p>
+      </div>
+    </div>
+    ${h.pick ? `<span class="px-1.5 py-0.2 rounded text-xs font-black bg-emerald-500/20 text-emerald-300 border border-emerald-500/40">${h.pick}</span>` : ''}
+  </div>
+
+  <!-- 【新增】實戰分析彩色標籤組 (跑法 / 路程 / 場地 / 檔位) -->
+  <div class="grid grid-cols-3 gap-1.5 mt-2 pt-1.5 border-t border-slate-800/60 text-[10px]">
+    <div class="bg-slate-900/80 p-1 rounded text-center border border-slate-800">
+      <span class="text-slate-400 block text-[9px]">擅長跑法</span>
+      <strong class="text-amber-400">${ana.style}</strong>
+    </div>
+    <div class="bg-slate-900/80 p-1 rounded text-center border border-slate-800">
+      <span class="text-slate-400 block text-[9px]">場地性能</span>
+      <strong class="text-emerald-400">${ana.track_apt}</strong>
+    </div>
+    <div class="bg-slate-900/80 p-1 rounded text-center border border-slate-800">
+      <span class="text-slate-400 block text-[9px]">同程考驗</span>
+      <strong class="text-sky-300">${ana.dist_apt}</strong>
+    </div>
+  </div>
+
+  <!-- 【新增】資深馬迷快速點評 -->
+  <p class="mt-2 text-[11px] text-slate-300 bg-slate-950/80 p-2 rounded-lg border border-slate-800/80 leading-relaxed">
+    💡 <strong class="text-emerald-400">實戰點評：</strong>${ana.summary || '近戰持續提升狀態，需留意檔位與起步節奏。'}
+  </p>
+
+  <!-- 往績/晨課抽屜 -->
+  <button onclick="toggleDrawer('${key}')" class="mt-2 w-full bg-slate-900/90 hover:bg-slate-800 border border-slate-800 rounded-lg py-1 px-2.5 flex justify-between items-center text-[10px] font-bold text-emerald-400">
+    <span>📊 往績 (${(h.past_runs||[]).length}) · ⏱️ 晨課 (${(h.trackwork||[]).length}) · 🎬 片庫</span>
+    <span>${isOpen ? '▲ 收起' : '▼ 展開詳情'}</span>
+  </button>
+  ...
 
       // 精準頭條：不再每場都是董事盃
       document.getElementById('current-race-header').innerHTML = `
