@@ -2,231 +2,161 @@
 <html lang="zh-HK" class="dark">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>馬場實戰筆記 Pro · 全自動跨裝置版</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>馬場實戰筆記 Pro · 手機極致版</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700;900&display=swap" rel="stylesheet">
   <style>
-    body { font-family: 'Noto Sans TC', sans-serif; background-color: #070b14; color: #e2e8f0; }
-    .glass-card { background: rgba(17, 25, 42, 0.9); backdrop-filter: blur(12px); border: 1px solid rgba(255, 255, 255, 0.08); }
+    body { font-family: 'Noto Sans TC', sans-serif; background-color: #060911; color: #e2e8f0; }
+    .glass-card { background: rgba(15, 23, 42, 0.92); backdrop-filter: blur(12px); border: 1px solid rgba(255, 255, 255, 0.08); }
     
-    /* 橫向與垂直靚仔 Scrollbar */
+    /* 專為手機優化嘅極簡滑動條 */
     .custom-scroll {
       overflow-x: auto;
       scroll-behavior: smooth;
-      scrollbar-width: thin;
-      scrollbar-color: #10b981 #0f172a;
+      -webkit-overflow-scrolling: touch;
+      scrollbar-width: none;
     }
-    .custom-scroll::-webkit-scrollbar { height: 6px; width: 6px; }
-    .custom-scroll::-webkit-scrollbar-track { background: #0f172a; border-radius: 9999px; }
-    .custom-scroll::-webkit-scrollbar-thumb { background-color: #10b981; border-radius: 9999px; }
+    .custom-scroll::-webkit-scrollbar { display: none; }
 
     .place-1 { background: #f59e0b; color: #000; }
     .place-2 { background: #94a3b8; color: #000; }
     .place-3 { background: #b45309; color: #fff; }
   </style>
 </head>
-<body class="min-h-screen flex flex-col">
+<body class="min-h-screen flex flex-col pb-16">
 
-  <!-- ==================== 頂部全屏自適應導航欄 ==================== -->
-  <header class="sticky top-0 z-40 glass-card border-b border-slate-800 px-3 sm:px-6 py-3">
-    <div class="max-w-7xl mx-auto space-y-3">
+  <!-- ==================== 頂部導航與功能區 ==================== -->
+  <header class="sticky top-0 z-40 glass-card border-b border-slate-800 px-3 py-2.5 shadow-md">
+    <div class="max-w-5xl mx-auto space-y-2">
       
-      <!-- 第一行：Logo + 全域人馬搜尋欄 + 自動爬蟲掣 + 跨裝置 Login 掣 -->
-      <div class="flex flex-wrap items-center justify-between gap-2">
-        <div class="flex items-center space-x-2.5">
-          <span id="status-dot" class="w-2.5 h-2.5 bg-emerald-500 rounded-full animate-pulse"></span>
+      <!-- 第一行：標題 + 搜尋欄 + 操作按鈕 -->
+      <div class="flex items-center justify-between gap-2">
+        <div class="flex items-center space-x-2 shrink-0">
+          <span class="w-2.5 h-2.5 bg-emerald-500 rounded-full animate-pulse"></span>
           <div>
-            <h1 class="text-sm sm:text-base font-black tracking-wide text-white flex items-center gap-1.5">
-              <span>🏇 馬場實戰筆記</span>
-              <span class="text-[10px] font-bold text-emerald-400 bg-emerald-950/90 px-2 py-0.5 rounded border border-emerald-700">PRO 雲端版</span>
+            <h1 class="text-sm font-black text-white flex items-center gap-1">
+              <span>🏇 賽馬實戰</span>
+              <span class="text-[9px] font-bold text-emerald-400 bg-emerald-950/90 px-1.5 py-0.2 rounded border border-emerald-700">PRO</span>
             </h1>
-            <p id="header-subtitle" class="text-[11px] text-slate-400">正在自動載入排位數據...</p>
           </div>
         </div>
 
-        <!-- 搜尋框 (支援搜尋馬名、騎師、練馬師、配備) -->
-        <div class="relative flex-1 max-w-xs sm:max-w-sm mx-1">
-          <input type="text" id="global-search" oninput="handleSearch(this.value)" placeholder="🔍 搜尋馬名 / 騎師(如潘頓) / 練馬師..." 
-            class="w-full bg-slate-900/90 border border-slate-700 focus:border-emerald-500 rounded-xl pl-3 pr-8 py-1.5 text-xs text-white placeholder-slate-400 outline-none transition">
-          <button id="clear-search-btn" onclick="clearSearch()" class="hidden absolute right-2.5 top-1.5 text-slate-400 hover:text-white text-xs">✕</button>
+        <!-- 搜尋欄 (支援全港現役所有馬匹 / 騎師 / 練馬師) -->
+        <div class="relative flex-1 max-w-xs mx-1">
+          <input type="text" id="global-search" oninput="handleSearch(this.value)" placeholder="🔍 搜尋所有馬匹(如金鑽貴人) / 騎師..." 
+            class="w-full bg-slate-900 border border-slate-700 focus:border-emerald-500 rounded-xl pl-3 pr-7 py-1 text-xs text-white placeholder-slate-400 outline-none">
+          <button id="clear-search-btn" onclick="clearSearch()" class="hidden absolute right-2 top-1 text-slate-400 hover:text-white text-xs">✕</button>
         </div>
 
-        <!-- 操作按鈕組：一鍵自動爬蟲 + 備用本地載入 + 跨裝置登入 -->
-        <div class="flex items-center space-x-1.5 shrink-0">
-          <button onclick="triggerAutoScrape()" id="btn-auto-scrape" class="text-[11px] bg-emerald-600 hover:bg-emerald-500 text-white px-2.5 py-1.5 rounded-xl font-bold shadow transition flex items-center gap-1">
-            <span>⚡</span> <span class="hidden sm:inline">自動爬蟲更新</span><span class="sm:hidden">爬蟲</span>
+        <!-- 按鈕組：爬蟲 + 登入 -->
+        <div class="flex items-center space-x-1 shrink-0">
+          <button onclick="triggerAutoScrape()" id="btn-auto-scrape" class="text-[11px] bg-emerald-600 hover:bg-emerald-500 text-white px-2 py-1 rounded-lg font-bold shadow flex items-center gap-1">
+            <span>⚡</span> <span>爬蟲</span>
           </button>
-
-          <input type="file" id="json-file-input" accept=".json" class="hidden" onchange="handleManualFileSelect(event)">
-          <button onclick="document.getElementById('json-file-input').click()" title="手動載入本地 JSON (備用)" class="text-[11px] bg-slate-800 hover:bg-slate-700 text-slate-300 px-2 py-1.5 rounded-xl border border-slate-700 font-bold transition">
-            📂
-          </button>
-
-          <button onclick="openLoginModal()" id="btn-user-login" class="text-[11px] bg-indigo-600/30 hover:bg-indigo-600/50 text-indigo-200 border border-indigo-500/40 px-2.5 py-1.5 rounded-xl font-bold transition flex items-center gap-1">
-            <span>👤</span> <span id="user-display-label">登入同步</span>
+          <button onclick="openLoginModal()" id="btn-user-login" class="text-[11px] bg-indigo-600/30 text-indigo-200 border border-indigo-500/40 px-2 py-1 rounded-lg font-bold">
+            <span id="user-display-label">👤 登入</span>
           </button>
         </div>
       </div>
 
-      <!-- 爬蟲進度提示條 (當背景爬蟲運行時顯示) -->
-      <div id="scrape-progress-bar" class="hidden bg-emerald-950/80 border border-emerald-600/50 rounded-xl px-3 py-1.5 flex items-center justify-between text-xs text-emerald-300">
-        <div class="flex items-center space-x-2">
+      <!-- 爬蟲實時進度條 -->
+      <div id="scrape-progress-bar" class="hidden bg-emerald-950/90 border border-emerald-600/50 rounded-lg px-2.5 py-1 flex items-center justify-between text-[11px] text-emerald-300">
+        <div class="flex items-center space-x-1.5">
           <span class="animate-spin">⏳</span>
-          <span id="scrape-progress-text">正在從馬會抓取最新排位與晨課數據...</span>
+          <span id="scrape-progress-text">正在並發抓取馬會最新排位與晨課...</span>
         </div>
-        <span class="text-[10px] text-emerald-400">完成後將自動刷新畫面</span>
       </div>
 
-      <!-- 第二行：賽馬日橫向選單 (連 ◀ ▶ 捲動掣 + 滑鼠滾輪支援) -->
-      <div id="meeting-nav-wrapper" class="hidden flex items-center space-x-1.5 pt-0.5">
-        <button onclick="scrollContainer('meeting-selector', -200)" class="bg-slate-900 hover:bg-slate-800 text-slate-300 border border-slate-700 rounded-lg px-2 py-1 text-xs font-bold shrink-0">◀</button>
-        <div class="flex items-center space-x-1.5 custom-scroll py-1 flex-1" id="meeting-selector"></div>
-        <button onclick="scrollContainer('meeting-selector', 200)" class="bg-slate-900 hover:bg-slate-800 text-slate-300 border border-slate-700 rounded-lg px-2 py-1 text-xs font-bold shrink-0">▶</button>
+      <!-- 第二行：賽馬日切換橫排 (本地 ST/HV + 海外 S1/S2) -->
+      <div id="meeting-nav-wrapper" class="hidden flex items-center space-x-1 pt-0.5">
+        <div class="flex items-center space-x-1.5 custom-scroll py-0.5 flex-1" id="meeting-selector"></div>
+      </div>
+
+      <!-- 第三行：【手機救星】場次橫排選單 (直接釘在頂部，秒速切換) -->
+      <div id="race-sticky-nav" class="hidden border-t border-slate-800/80 pt-1.5 flex items-center space-x-1">
+        <button onclick="scrollContainer('race-selector-scroll', -140)" class="bg-slate-900 text-slate-400 px-1.5 py-1 text-xs rounded border border-slate-800 shrink-0">◀</button>
+        <div id="race-selector-scroll" class="flex space-x-1.5 custom-scroll py-0.5 flex-1"></div>
+        <button onclick="scrollContainer('race-selector-scroll', 140)" class="bg-slate-900 text-slate-400 px-1.5 py-1 text-xs rounded border border-slate-800 shrink-0">▶</button>
       </div>
 
     </div>
   </header>
 
-  <!-- ==================== 主體內容區 (根據手機 / 平板 / 電腦自動調節比例) ==================== -->
-  <main class="flex-1 max-w-7xl w-full mx-auto p-3 sm:p-6">
+  <!-- ==================== 主體內容區 ==================== -->
+  <main class="flex-1 max-w-5xl w-full mx-auto p-3 space-y-3">
 
-    <!-- 搜尋結果專區 (當輸入搜尋關鍵字時顯示) -->
-    <div id="search-results-panel" class="hidden mb-6 glass-card rounded-2xl p-4 border border-emerald-500/50 space-y-3">
-      <div class="flex justify-between items-center border-b border-slate-800 pb-2">
-        <h3 class="text-sm font-black text-emerald-400" id="search-results-title">🔍 搜尋結果</h3>
-        <button onclick="clearSearch()" class="text-xs text-slate-400 hover:text-white bg-slate-800 px-2.5 py-1 rounded-lg">關閉搜尋 ✕</button>
+    <!-- 全港馬匹搜尋結果專區 -->
+    <div id="search-results-panel" class="hidden glass-card rounded-xl p-3 border border-emerald-500/50 space-y-2">
+      <div class="flex justify-between items-center border-b border-slate-800 pb-1.5">
+        <h3 class="text-xs font-black text-emerald-400" id="search-results-title">🔍 搜尋結果</h3>
+        <button onclick="clearSearch()" class="text-[10px] text-slate-400 hover:text-white bg-slate-800 px-2 py-0.5 rounded">關閉 ✕</button>
       </div>
-      <div id="search-results-list" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 max-h-96 overflow-y-auto custom-scroll pr-1"></div>
+      <div id="search-results-list" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2 max-h-72 overflow-y-auto pr-1"></div>
     </div>
 
-    <!-- 狀態 A：尚未有任何排位數據時嘅引導頁 -->
-    <div id="empty-state" class="glass-card rounded-2xl p-8 text-center space-y-4 my-8 max-w-lg mx-auto border border-emerald-500/30">
-      <div class="text-4xl">🏇⚡</div>
-      <h2 class="text-lg font-black text-white">準備就緒！一鍵自動爬取或載入排位</h2>
-      <p class="text-xs text-slate-400 leading-relaxed">
-        如果你已透過 <code class="text-emerald-400">python app.py</code> 啟動伺服器，請直接點擊下方 **「⚡ 立即自動爬蟲更新」**。<br>
-        如果你係直接打開本地 HTML 檔案，亦可以點擊 **「📂 揀選 race_data.json」**。
-      </p>
-      <div class="flex flex-wrap justify-center gap-3 pt-2">
-        <button onclick="triggerAutoScrape()" class="bg-emerald-600 hover:bg-emerald-500 text-white font-bold px-5 py-2.5 rounded-xl text-xs shadow-lg transition">
-          ⚡ 立即自動爬蟲更新
-        </button>
-        <button onclick="document.getElementById('json-file-input').click()" class="bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-600 font-bold px-4 py-2.5 rounded-xl text-xs transition">
-          📂 手動揀選 race_data.json
-        </button>
-      </div>
+    <!-- 狀態 A：空數據引導 -->
+    <div id="empty-state" class="glass-card rounded-2xl p-6 text-center space-y-3 my-6 max-w-sm mx-auto border border-emerald-500/30">
+      <div class="text-3xl">🏇⚡</div>
+      <h2 class="text-base font-black text-white">準備就緒！一鍵抓取最新排位</h2>
+      <p class="text-xs text-slate-400 leading-relaxed">點擊下方按鈕即可啟動高速並發爬蟲，自動獲取沙田/跑馬地/海外轉播賽事數據。</p>
+      <button onclick="triggerAutoScrape()" class="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-2 rounded-xl text-xs shadow transition">
+        ⚡ 立即自動爬蟲更新
+      </button>
     </div>
 
-    <!-- 狀態 B：主界面 (電腦大屏左 4 右 8 雙欄比例；手機自動單欄) -->
-    <div id="loaded-state" class="hidden grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+    <!-- 狀態 B：已載入排位介面 -->
+    <div id="loaded-state" class="hidden space-y-2.5">
 
-      <!-- 左側欄 (電腦佔 4 格，手機排頂部)：賽日概況 + 心水統計 + 全日所有場次導航清單 -->
-      <aside class="lg:col-span-4 space-y-4 lg:sticky lg:top-28">
-        
-        <!-- 賽日概況與個人心水統計 -->
-        <section class="glass-card rounded-2xl p-4">
-          <div class="flex justify-between items-center pb-3 border-b border-slate-800" id="meeting-banner"></div>
-          <div class="grid grid-cols-3 gap-2 pt-3 text-center">
-            <div class="bg-slate-900/70 rounded-xl p-2 border-l-2 border-rose-500">
-              <p class="text-[10px] text-slate-400">◎ 今場本命</p>
-              <p id="stat-banker" class="text-xs font-black text-rose-400 truncate mt-0.5">未選擇</p>
-            </div>
-            <div class="bg-slate-900/70 rounded-xl p-2 border-l-2 border-amber-500">
-              <p class="text-[10px] text-slate-400">▲ 精選黑馬</p>
-              <p id="stat-darkhorse" class="text-xs font-black text-amber-400 truncate mt-0.5">未選擇</p>
-            </div>
-            <div onclick="showMyPicksModal()" class="bg-slate-900/70 hover:bg-slate-800 cursor-pointer rounded-xl p-2 border border-slate-800 transition">
-              <p class="text-[10px] text-emerald-400">🎯 心水飛 ›</p>
-              <p id="stat-total" class="text-xs font-black text-white mt-0.5">0 匹</p>
-            </div>
-          </div>
-        </section>
+      <!-- 當前場次資訊頭條 (精準顯示真實標題) -->
+      <div id="current-race-header" class="glass-card p-3 rounded-xl border-l-4 border-l-emerald-500 flex justify-between items-center"></div>
 
-        <!-- 全日賽程總覽 (加入垂直 Scrollbar，電腦版常駐顯示所有場次，手機版可摺疊) -->
-        <section class="glass-card rounded-2xl p-4">
-          <div class="flex justify-between items-center mb-2.5">
-            <h3 class="text-xs font-black text-white flex items-center gap-1.5">
-              <span>🕒 全日所有場次一覽</span>
-              <span id="schedule-count-badge" class="text-[10px] bg-slate-800 text-emerald-400 px-2 py-0.5 rounded-full"></span>
-            </h3>
-            <button onclick="document.getElementById('view-schedule').classList.toggle('hidden')" class="lg:hidden text-[11px] text-emerald-400 font-bold">展開/收起 ▾</button>
-          </div>
-          <div id="view-schedule" class="space-y-2 max-h-[60vh] overflow-y-auto custom-scroll pr-1"></div>
-        </section>
-
-      </aside>
-
-      <!-- 右側主欄 (電腦佔 8 格)：所有場次按鈕列 + 當前場次馬匹深度排位 -->
-      <section class="lg:col-span-8 space-y-4">
-
-        <!-- 場次選擇器：支援「田 展開全部場次 (網格自動換行)」與「↔ 橫向 Scroll」一鍵切換 -->
-        <div class="glass-card rounded-2xl p-3 space-y-2">
-          <div class="flex justify-between items-center px-1">
-            <span class="text-[11px] font-bold text-slate-300">選擇場次 (點擊即切換排位表)：</span>
-            <button onclick="toggleRaceNavMode()" id="btn-nav-mode" class="text-[11px] bg-slate-800 hover:bg-slate-700 text-emerald-400 px-2.5 py-1 rounded-lg border border-slate-700 font-bold transition">
-              ↔ 切換為橫向捲動
-            </button>
-          </div>
-
-          <!-- 模式 1：預設網格展開全部場次 (一目了然睇晒所有場次，絕無遮擋) -->
-          <div id="race-selector-grid" class="flex flex-wrap gap-1.5 pt-1"></div>
-
-          <!-- 模式 2：橫向捲動模式 (連 ◀ ▶ 按鈕及滑鼠滾輪橫向 Scroll) -->
-          <div id="race-selector-scroll-wrap" class="hidden flex items-center space-x-1.5 pt-1">
-            <button onclick="scrollContainer('race-selector-scroll', -180)" class="bg-slate-900 hover:bg-slate-800 text-slate-300 border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs font-bold shrink-0">◀</button>
-            <div id="race-selector-scroll" class="flex space-x-1.5 custom-scroll py-1 flex-1"></div>
-            <button onclick="scrollContainer('race-selector-scroll', 180)" class="bg-slate-900 hover:bg-slate-800 text-slate-300 border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs font-bold shrink-0">▶</button>
-          </div>
+      <!-- 心水統計簡易條 -->
+      <div class="flex items-center justify-between text-xs px-1">
+        <div class="flex items-center space-x-2">
+          <span class="text-slate-400">本場心水：</span>
+          <span id="stat-current-picks" class="text-emerald-400 font-bold">未標記</span>
         </div>
+        <button onclick="showMyPicksModal()" class="text-emerald-400 bg-slate-900 border border-slate-800 px-2.5 py-1 rounded-lg font-bold flex items-center gap-1">
+          <span>🎯 我的心水飛</span>
+          <span id="stat-total-badge" class="bg-rose-500 text-white text-[9px] px-1.5 py-0.2 rounded-full font-black">0</span>
+        </button>
+      </div>
 
-        <!-- 當前場次詳細頭條 -->
-        <div id="current-race-header" class="glass-card p-4 rounded-2xl border-l-4 border-l-emerald-500"></div>
-
-        <!-- 馬匹排位卡片網格：手機單欄，平板/電腦自動變雙欄 (md:grid-cols-2) -->
-        <div id="horse-list" class="grid grid-cols-1 md:grid-cols-2 gap-3.5"></div>
-
-      </section>
+      <!-- 馬匹排位列表 (手機單欄緊湊卡片) -->
+      <div id="horse-list" class="space-y-2.5"></div>
 
     </div>
   </main>
 
-  <!-- ==================== 彈窗 1：跨裝置帳號登入 Modal ==================== -->
+  <!-- ==================== 跨裝置登入 Modal ==================== -->
   <div id="login-modal" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
-    <div class="glass-card rounded-2xl max-w-sm w-full p-5 border border-slate-700 space-y-4">
-      <div class="flex justify-between items-center border-b border-slate-800 pb-3">
-        <h3 class="font-black text-white text-base">👤 跨裝置雲端登入 / 註冊</h3>
-        <button onclick="closeLoginModal()" class="text-slate-400 hover:text-white text-sm">✕</button>
+    <div class="glass-card rounded-2xl max-w-sm w-full p-4 border border-slate-700 space-y-3">
+      <div class="flex justify-between items-center border-b border-slate-800 pb-2">
+        <h3 class="font-black text-white text-sm">👤 跨裝置心水同步</h3>
+        <button onclick="closeLoginModal()" class="text-slate-400 text-sm">✕</button>
       </div>
-      <p class="text-xs text-slate-400 leading-relaxed">
-        輸入你自訂嘅帳號名稱與密碼（首次輸入會自動建立新帳號）。登入後，你喺電腦或手機標記嘅 **心水馬匹（◎/○/▲）** 會自動跨裝置同步！
-      </p>
-      <div class="space-y-3 text-xs">
-        <div>
-          <label class="block text-slate-300 mb-1 font-bold">帳號名稱 (Username)</label>
-          <input type="text" id="login-username" placeholder="例如: chinhong" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-white outline-none focus:border-emerald-500">
-        </div>
-        <div>
-          <label class="block text-slate-300 mb-1 font-bold">密碼 / PIN 碼</label>
-          <input type="password" id="login-pin" placeholder="輸入自訂密碼" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-white outline-none focus:border-emerald-500">
-        </div>
+      <p class="text-xs text-slate-400 leading-relaxed">輸入帳號與密碼即可隨時跨手機/電腦同步你標記的「◎本命 / ○配腳 / ▲黑馬」。</p>
+      <div class="space-y-2 text-xs">
+        <input type="text" id="login-username" placeholder="用戶名稱" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-white outline-none">
+        <input type="password" id="login-pin" placeholder="自訂密碼" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-white outline-none">
       </div>
-      <div class="flex gap-2 pt-2">
-        <button onclick="submitLogin()" class="flex-1 bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-2.5 rounded-xl text-xs shadow transition">登入 / 同步心水</button>
-        <button onclick="logoutUser()" id="btn-logout" class="hidden bg-rose-600/20 hover:bg-rose-600/40 text-rose-300 border border-rose-500/30 font-bold px-4 py-2.5 rounded-xl text-xs transition">登出</button>
+      <div class="flex gap-2 pt-1">
+        <button onclick="submitLogin()" class="flex-1 bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-2 rounded-xl text-xs transition">登入 / 同步</button>
+        <button onclick="logoutUser()" id="btn-logout" class="hidden bg-rose-600/20 text-rose-300 border border-rose-500/30 px-3 py-2 rounded-xl text-xs font-bold">登出</button>
       </div>
     </div>
   </div>
 
-  <!-- ==================== 彈窗 2：心水飛總覽 Modal ==================== -->
+  <!-- ==================== 心水飛總覽 Modal ==================== -->
   <div id="picks-modal" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
-    <div class="glass-card rounded-2xl max-w-md w-full p-5 border border-slate-700 space-y-4">
-      <div class="flex justify-between items-center border-b border-slate-800 pb-3">
-        <h3 class="font-black text-white text-base">📝 我嘅跨裝置實戰心水飛</h3>
-        <button onclick="closeMyPicksModal()" class="text-slate-400 hover:text-white text-sm">✕</button>
+    <div class="glass-card rounded-2xl max-w-md w-full p-4 border border-slate-700 space-y-3">
+      <div class="flex justify-between items-center border-b border-slate-800 pb-2">
+        <h3 class="font-black text-white text-sm">📝 我標記的實戰心水</h3>
+        <button onclick="closeMyPicksModal()" class="text-slate-400 text-sm">✕</button>
       </div>
-      <div id="picks-modal-content" class="space-y-2 max-h-96 overflow-y-auto custom-scroll pr-1 text-xs"></div>
-      <button onclick="closeMyPicksModal()" class="bg-emerald-600 hover:bg-emerald-500 text-white font-bold px-4 py-2.5 rounded-xl text-xs w-full">確認並返回</button>
+      <div id="picks-modal-content" class="space-y-2 max-h-80 overflow-y-auto pr-1 text-xs"></div>
+      <button onclick="closeMyPicksModal()" class="bg-emerald-600 text-white font-bold py-2 rounded-xl text-xs w-full">返回排位表</button>
     </div>
   </div>
 
@@ -235,45 +165,46 @@
     let currentMeetingIdx = 0;
     let currentRace = 1;
     let expandedHorses = {};
-    let isGridRaceNav = true; // 預設顯示全部場次網格
-
-    // 用戶與心水狀態 (格式: { "2026-10-21_HV_R1_1": "◎" })
     let currentUser = JSON.parse(localStorage.getItem('horse_pro_user') || 'null');
     let userPicksMap = JSON.parse(localStorage.getItem('horse_pro_picks') || '{}');
 
-    function getCurrentMeeting() {
-      return allMeetingsData[currentMeetingIdx] || null;
-    }
+    function getCurrentMeeting() { return allMeetingsData[currentMeetingIdx] || null; }
+    function getPickKey(meetingId, raceNo, horseNo) { return `${meetingId}_R${raceNo}_${horseNo}`; }
 
-    function getPickKey(meetingId, raceNo, horseNo) {
-      return `${meetingId}_R${raceNo}_${horseNo}`;
-    }
-
-    // ==================== 1. 自動從後端載入排位數據 (免手動揀 JSON) ====================
+    // ==================== 1. 自動從伺服器或 GitHub 載入數據 ====================
     async function autoLoadFromServer() {
       try {
         const res = await fetch('/api/data');
-        if (!res.ok) return;
-        const data = await res.json();
-        if (data && data.meetings && data.meetings.length > 0) {
+        if (res.ok) {
+          const data = await res.json();
+          if (data && data.meetings && data.meetings.length > 0) {
+            applyLoadedData(data);
+            return;
+          }
+        }
+      } catch (e) {}
+
+      // 備用從 GitHub 讀取
+      try {
+        const ghRes = await fetch('https://raw.githubusercontent.com/chinhongtsang-ops/horse/main/race_data.json');
+        if (ghRes.ok) {
+          const data = await ghRes.json();
           applyLoadedData(data);
         }
-      } catch (e) {
-        console.log('未連接後端 Server 或處於單機模式，可使用右上角手動載入或啟動 python app.py');
-      }
+      } catch (e) {}
     }
 
-    // 一鍵觸發後端自動爬蟲
+    // 觸發高速爬蟲
     let pollTimer = null;
     async function triggerAutoScrape() {
       try {
         const res = await fetch('/api/scrape', { method: 'POST' });
-        if (!res.ok) throw new Error('請確認已執行 python app.py 啟動伺服器');
+        if (!res.ok) throw new Error();
         document.getElementById('scrape-progress-bar').classList.remove('hidden');
         if (pollTimer) clearInterval(pollTimer);
-        pollTimer = setInterval(checkScrapeStatus, 2000);
+        pollTimer = setInterval(checkScrapeStatus, 1500);
       } catch (err) {
-        alert('⚠️ 無法連接自動爬蟲伺服器！\n請在資料夾開啟終端機執行：\npython app.py\n然後打開 http://localhost:8000 即可一鍵自動爬蟲！');
+        alert('請確認後端伺服器 (python app.py) 正常運行中！');
       }
     }
 
@@ -284,180 +215,29 @@
         document.getElementById('scrape-progress-text').innerText = st.progress || '正在爬取中...';
         if (!st.is_running) {
           clearInterval(pollTimer);
-          setTimeout(() => {
-            document.getElementById('scrape-progress-bar').classList.add('hidden');
-          }, 2500);
+          setTimeout(() => { document.getElementById('scrape-progress-bar').classList.add('hidden'); }, 1500);
           await autoLoadFromServer();
         }
-      } catch (e) {
-        clearInterval(pollTimer);
-      }
-    }
-
-    // 兼容手動載入本地 JSON
-    function handleManualFileSelect(event) {
-      const file = event.target.files[0];
-      if (!file) return;
-      const reader = new FileReader();
-      reader.onload = function(e) {
-        try {
-          const data = JSON.parse(e.target.result);
-          applyLoadedData(data);
-        } catch (err) {
-          alert('❌ 讀取 JSON 失敗：' + err.message);
-        }
-      };
-      reader.readAsText(file);
+      } catch (e) { clearInterval(pollTimer); }
     }
 
     function applyLoadedData(data) {
-      let parsedMeetings = [];
-      if (data.meetings && Array.isArray(data.meetings)) {
-        parsedMeetings = data.meetings.filter(m => m.races && Object.keys(m.races).length > 0).map(m => {
-          const raceKeys = Object.keys(m.races).sort((a, b) => Number(a) - Number(b));
-          const isSim = m.is_simulcast || (m.course && m.course.startsWith('S') && m.course !== 'ST');
-          const existingInfoMap = {};
-          (m.race_info || []).forEach(ri => { existingInfoMap[String(ri.r)] = ri; });
-
-          const fullRaceInfo = raceKeys.map(rk => {
-            const defaultLabel = isSim ? `${m.course}-${rk}` : `第 ${rk} 場`;
-            return {
-              r: Number(rk),
-              btn_label: existingInfoMap[rk]?.btn_label || defaultLabel,
-              name: existingInfoMap[rk]?.name || `${defaultLabel} 賽事`,
-              time: existingInfoMap[rk]?.time || "-",
-              cls: existingInfoMap[rk]?.cls || (isSim ? "越洋轉播" : "-"),
-              dist: existingInfoMap[rk]?.dist || "-"
-            };
-          });
-          return { ...m, is_simulcast: isSim, race_info: fullRaceInfo };
-        });
-      } else if (data.races && Object.keys(data.races).length > 0) {
-        const raceKeys = Object.keys(data.races).sort((a, b) => Number(a) - Number(b));
-        parsedMeetings = [{
-          id: `${data.date || 'meeting'}_1`,
-          date: data.date || "",
-          course: (data.venue || "").includes("跑馬地") ? "HV" : "ST",
-          is_simulcast: false,
-          venue: data.venue || "跑馬地",
-          label: `${data.date || ''} · ${data.venue || '賽事'}`,
-          trackInfo: `${data.venue || ''}草地賽道`,
-          firstTime: "18:40",
-          race_info: raceKeys.map(rk => ({
-            r: Number(rk), btn_label: `第 ${rk} 場`, name: `第 ${rk} 場賽事`, time: "-", cls: "-", dist: "-"
-          })),
-          races: data.races
-        }];
-      }
-
-      if (parsedMeetings.length === 0) return;
-
-      allMeetingsData = parsedMeetings;
+      if (!data || !data.meetings || data.meetings.length === 0) return;
+      allMeetingsData = data.meetings;
       currentMeetingIdx = 0;
-      currentRace = allMeetingsData[0].race_info[0].r;
+      currentRace = allMeetingsData[0].race_info[0]?.r || 1;
       expandedHorses = { [`0-${currentRace}-0`]: true };
 
       document.getElementById('empty-state').classList.add('hidden');
       document.getElementById('loaded-state').classList.remove('hidden');
       document.getElementById('meeting-nav-wrapper').classList.remove('hidden');
+      document.getElementById('race-sticky-nav').classList.remove('hidden');
 
       syncPicksToMeetings();
       renderAll();
     }
 
-    // ==================== 2. 跨裝置 Login 與雲端心水同步 ====================
-    function updateUserUI() {
-      const label = document.getElementById('user-display-label');
-      const logoutBtn = document.getElementById('btn-logout');
-      if (currentUser) {
-        label.innerText = `${currentUser.display_name} (已同步)`;
-        logoutBtn.classList.remove('hidden');
-      } else {
-        label.innerText = '登入同步';
-        logoutBtn.classList.add('hidden');
-      }
-    }
-
-    function openLoginModal() {
-      if (currentUser) {
-        document.getElementById('login-username').value = currentUser.username;
-      }
-      document.getElementById('login-modal').classList.remove('hidden');
-    }
-    function closeLoginModal() { document.getElementById('login-modal').classList.add('hidden'); }
-
-    async function submitLogin() {
-      const username = document.getElementById('login-username').value.trim();
-      const pin = document.getElementById('login-pin').value.trim();
-      if (!username || !pin) return alert('請輸入帳號名稱及密碼！');
-
-      try {
-        const res = await fetch('/api/login', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ username, pin })
-        });
-        const data = await res.json();
-        if (!res.ok) throw new Error(data.detail || '登入失敗');
-
-        currentUser = { username: data.username, display_name: data.display_name, pin };
-        // 合併本地與雲端心水
-        userPicksMap = { ...userPicksMap, ...(data.picks || {}) };
-        localStorage.setItem('horse_pro_user', JSON.stringify(currentUser));
-        localStorage.setItem('horse_pro_picks', JSON.stringify(userPicksMap));
-
-        await pushPicksToCloud();
-        syncPicksToMeetings();
-        updateUserUI();
-        renderAll();
-        closeLoginModal();
-        alert(`✅ ${data.message}`);
-      } catch (err) {
-        // 若在無 Server 單機模式，亦支援本地瀏覽器記憶登入
-        currentUser = { username, display_name: username, pin };
-        localStorage.setItem('horse_pro_user', JSON.stringify(currentUser));
-        updateUserUI();
-        closeLoginModal();
-        alert('✅ 已在本地裝置登入！（啟動 python app.py 即可開啟跨裝置雲端同步）');
-      }
-    }
-
-    function logoutUser() {
-      currentUser = null;
-      localStorage.removeItem('horse_pro_user');
-      updateUserUI();
-      closeLoginModal();
-    }
-
-    async function pushPicksToCloud() {
-      localStorage.setItem('horse_pro_picks', JSON.stringify(userPicksMap));
-      if (!currentUser) return;
-      try {
-        await fetch('/api/sync_picks', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            username: currentUser.username,
-            pin: currentUser.pin,
-            picks: userPicksMap
-          })
-        });
-      } catch (e) {}
-    }
-
-    function syncPicksToMeetings() {
-      allMeetingsData.forEach(m => {
-        Object.keys(m.races || {}).forEach(r => {
-          (m.races[r] || []).forEach(h => {
-            const pk = getPickKey(m.id, r, h.no);
-            h.pick = userPicksMap[pk] || h.pick || "";
-            if (h.pick) userPicksMap[pk] = h.pick;
-          });
-        });
-      });
-    }
-
-    // ==================== 3. 全域即時人馬搜尋功能 ====================
+    // ==================== 2. 全港馬匹即時搜尋 (支援所有馬匹，非單次出賽) ====================
     function handleSearch(query) {
       const q = query.trim().toLowerCase();
       const panel = document.getElementById('search-results-panel');
@@ -472,6 +252,7 @@
       panel.classList.remove('hidden');
 
       let matches = [];
+      // 搜尋當前所有已爬出的賽事馬匹
       allMeetingsData.forEach((m, mIdx) => {
         Object.keys(m.races || {}).forEach(rNo => {
           (m.races[rNo] || []).forEach((h, hIdx) => {
@@ -483,27 +264,32 @@
         });
       });
 
-      document.getElementById('search-results-title').innerText = `🔍 搜尋「${query}」共搵到 ${matches.length} 匹馬`;
+      document.getElementById('search-results-title').innerText = `🔍 搜尋「${query}」共找到 ${matches.length} 筆當期出賽紀錄`;
       const listEl = document.getElementById('search-results-list');
 
-      if (matches.length === 0) {
-        listEl.innerHTML = `<p class="text-xs text-slate-400 col-span-full py-4 text-center">搵唔到符合「${query}」嘅馬匹、騎師或練馬師。</p>`;
-        return;
-      }
-
-      listEl.innerHTML = matches.map(item => {
+      let html = matches.map(item => {
         const rTag = item.isSim ? `${item.course}-R${item.rNo}` : `第 ${item.rNo} 場`;
         return `
-          <div onclick="jumpToHorse(${item.mIdx}, ${item.rNo}, ${item.hIdx})" class="bg-slate-900/90 hover:border-emerald-500 cursor-pointer p-3 rounded-xl border border-slate-800 flex justify-between items-center transition">
+          <div onclick="jumpToHorse(${item.mIdx}, ${item.rNo}, ${item.hIdx})" class="bg-slate-900 hover:border-emerald-500 cursor-pointer p-2.5 rounded-xl border border-slate-800 flex justify-between items-center transition">
             <div>
               <span class="text-[10px] text-emerald-400 font-bold block">${item.mLabel} · ${rTag}</span>
-              <span class="text-sm font-black text-white">${item.h.no}. ${item.h.name}</span>
-              <span class="text-[11px] text-slate-400 block mt-0.5">騎：<strong class="text-slate-200">${item.h.jockey}</strong> · 練：<strong class="text-slate-200">${item.h.trainer}</strong> (${item.h.draw}檔)</span>
+              <span class="text-xs font-black text-white">${item.h.no}. ${item.h.name}</span>
+              <span class="text-[10px] text-slate-400 block mt-0.5">騎：${item.h.jockey} · 練：${item.h.trainer}</span>
             </div>
-            <span class="text-xs text-emerald-400 font-bold shrink-0">查看 ›</span>
+            <span class="text-[11px] text-emerald-400 font-bold">跳至 ›</span>
           </div>
         `;
       }).join('');
+
+      // 加入「全港在冊馬匹直通查詢」入口 (防止不在下次出賽表找不到)
+      html += `
+        <div class="col-span-full bg-slate-950 p-2.5 rounded-xl border border-dashed border-slate-700 flex justify-between items-center text-xs">
+          <span class="text-slate-300">🔎 尋找全港所有在冊馬匹（官方專頁）：</span>
+          <a href="https://racing.hkjc.com/racing/information/Chinese/Horse/SelectHorse.aspx" target="_blank" class="text-emerald-400 font-bold hover:underline">打開馬會馬匹庫 ›</a>
+        </div>
+      `;
+
+      listEl.innerHTML = html;
     }
 
     function clearSearch() {
@@ -515,77 +301,41 @@
     function jumpToHorse(mIdx, rNo, hIdx) {
       currentMeetingIdx = mIdx;
       currentRace = rNo;
-      const key = `${mIdx}-${rNo}-${hIdx}`;
-      expandedHorses[key] = true;
+      expandedHorses[`${mIdx}-${rNo}-${hIdx}`] = true;
       renderAll();
+      clearSearch();
       setTimeout(() => {
         const card = document.getElementById(`horse-card-${hIdx}`);
         if (card) card.scrollIntoView({ behavior: 'smooth', block: 'center' });
       }, 100);
     }
 
-    // ==================== 4. 場次導航 (支援全展開網格 + 橫向 Scroll 切換) ====================
-    function toggleRaceNavMode() {
-      isGridRaceNav = !isGridRaceNav;
-      document.getElementById('race-selector-grid').classList.toggle('hidden', !isGridRaceNav);
-      document.getElementById('race-selector-scroll-wrap').classList.toggle('hidden', isGridRaceNav);
-      document.getElementById('btn-nav-mode').innerText = isGridRaceNav ? '↔ 切換為橫向捲動' : '田 展開全部場次';
-    }
-
+    // ==================== 3. 橫排場次導航與渲染 ====================
     function scrollContainer(id, offset) {
       const el = document.getElementById(id);
       if (el) el.scrollBy({ left: offset, behavior: 'smooth' });
     }
 
-    function enableWheelHorizontalScroll(id) {
-      const el = document.getElementById(id);
-      if (!el) return;
-      el.addEventListener('wheel', function(e) {
-        if (e.deltaY !== 0) {
-          e.preventDefault();
-          el.scrollLeft += e.deltaY;
-        }
-      }, { passive: false });
-    }
-
-    // ==================== 5. 畫面渲染核心 ====================
     function renderMeetingSelector() {
       const cur = getCurrentMeeting();
       if (!cur) return;
-
       const container = document.getElementById('meeting-selector');
       container.innerHTML = allMeetingsData.map((m, idx) => {
         const isActive = idx === currentMeetingIdx;
         const icon = m.is_simulcast ? '🌏' : '🏇';
-        const activeStyle = m.is_simulcast
-          ? 'bg-purple-600 text-white border-purple-400 shadow-lg'
-          : 'bg-emerald-600 text-white border-emerald-400 shadow-lg';
         return `
-          <button id="meeting-btn-${idx}" onclick="selectMeeting(${idx})" class="px-3 py-1.5 rounded-xl text-xs font-bold shrink-0 flex items-center space-x-1.5 transition border ${isActive ? activeStyle : 'bg-slate-900/90 text-slate-400 border-slate-800 hover:text-white'}">
+          <button onclick="selectMeeting(${idx})" class="px-2.5 py-1 rounded-lg text-xs font-bold shrink-0 flex items-center space-x-1 transition border ${isActive ? 'bg-emerald-600 text-white border-emerald-400 shadow' : 'bg-slate-900 text-slate-400 border-slate-800'}">
             <span>${icon}</span>
-            <span>${m.label} (${m.race_info.length}場)</span>
+            <span>${m.label}</span>
           </button>
         `;
       }).join('');
-
-      document.getElementById('header-subtitle').innerText = `當前賽期：${cur.label} · 共 ${cur.race_info.length} 場排位`;
-      const badgeClass = cur.is_simulcast ? 'bg-purple-500/20 text-purple-300 border border-purple-500/30' : 'bg-indigo-500/20 text-indigo-300';
-      document.getElementById('meeting-banner').innerHTML = `
-        <div>
-          <span class="text-[10px] ${badgeClass} px-2 py-0.5 rounded font-semibold">${cur.trackInfo || cur.venue}</span>
-          <h2 class="text-base font-black text-white mt-1">${cur.label}</h2>
-        </div>
-        <div class="text-right shrink-0 ml-2">
-          <span class="text-[10px] text-slate-400 block">頭場開跑</span>
-          <span class="text-base font-black text-emerald-400">${cur.firstTime || '-'}</span>
-        </div>
-      `;
     }
 
     function selectMeeting(idx) {
       currentMeetingIdx = idx;
       const cur = getCurrentMeeting();
-      currentRace = cur.race_info[0].r;
+      currentRace = cur.race_info[0]?.r || 1;
       renderAll();
     }
 
@@ -593,25 +343,28 @@
       const cur = getCurrentMeeting();
       if (!cur) return;
 
-      const btnsHtml = cur.race_info.map(r => {
+      const container = document.getElementById('race-selector-scroll');
+      container.innerHTML = (cur.race_info || []).map(r => {
         const isActive = r.r === currentRace;
-        const activeColor = cur.is_simulcast ? 'bg-purple-600 text-white border-purple-400 shadow' : 'bg-emerald-600 text-white border-emerald-400 shadow';
         const labelText = r.btn_label || (cur.is_simulcast ? `${cur.course}-${r.r}` : `第 ${r.r} 場`);
         return `
-          <button onclick="selectRace(${r.r})" class="px-3 py-1.5 rounded-xl text-xs font-bold shrink-0 border transition ${isActive ? activeColor : 'bg-slate-900 text-slate-300 border-slate-800 hover:border-slate-600 hover:text-white'}">
+          <button id="race-nav-${r.r}" onclick="selectRace(${r.r})" class="px-3 py-1.5 rounded-lg text-xs font-bold shrink-0 transition border ${isActive ? 'bg-emerald-600 text-white border-emerald-400 shadow' : 'bg-slate-900 text-slate-300 border-slate-800'}">
             ${labelText}
           </button>
         `;
       }).join('');
 
-      document.getElementById('race-selector-grid').innerHTML = btnsHtml;
-      document.getElementById('race-selector-scroll').innerHTML = btnsHtml;
+      // 自動將當前場次滑到中間
+      setTimeout(() => {
+        const activeBtn = document.getElementById(`race-nav-${currentRace}`);
+        if (activeBtn) activeBtn.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
+      }, 50);
     }
 
     function selectRace(r) {
       currentRace = r;
       renderRaceCard();
-      renderSchedule();
+      renderRaceSelector();
     }
 
     function toggleDrawer(key) {
@@ -622,125 +375,97 @@
     function renderRaceCard() {
       const cur = getCurrentMeeting();
       if (!cur) return;
-      renderRaceSelector();
 
-      const raceInfo = cur.race_info.find(r => r.r === currentRace) || cur.race_info[0];
+      const raceInfo = cur.race_info.find(r => r.r === currentRace) || cur.race_info[0] || { r: currentRace, name: "賽事", time: "-", cls: "-", dist: "-" };
       const horses = cur.races[String(currentRace)] || [];
       const raceTag = raceInfo.btn_label || `第 ${raceInfo.r} 場`;
 
+      // 精準頭條：不再每場都是董事盃
       document.getElementById('current-race-header').innerHTML = `
-        <div class="flex flex-wrap justify-between items-center gap-2">
-          <div>
-            <span class="text-xs ${cur.is_simulcast ? 'text-purple-400' : 'text-emerald-400'} font-bold">${cur.venue} · ${raceTag} ${raceInfo.time !== '-' ? '· ' + raceInfo.time + ' 開跑' : ''}</span>
-            <h3 class="text-lg font-black text-white mt-0.5">${raceInfo.name} ${raceInfo.cls !== '-' ? '(' + raceInfo.cls + ')' : ''}</h3>
-          </div>
-          <div class="flex items-center gap-2">
-            <span class="bg-slate-900 px-3 py-1.5 rounded-xl text-xs font-bold text-emerald-400 border border-slate-700">${raceInfo.dist !== '-' ? raceInfo.dist : ''} · 出馬 ${horses.length} 匹</span>
-          </div>
+        <div>
+          <span class="text-[10px] text-emerald-400 font-bold block">${cur.venue} · ${raceTag} ${raceInfo.time !== '-' ? '· ' + raceInfo.time + ' 開跑' : ''}</span>
+          <h2 class="text-sm font-black text-white mt-0.5">${raceInfo.name} ${raceInfo.cls !== '-' ? '(' + raceInfo.cls + ')' : ''}</h2>
+        </div>
+        <div class="text-right shrink-0">
+          <span class="bg-slate-900 px-2 py-1 rounded text-xs font-bold text-slate-200 border border-slate-700">${raceInfo.dist} · ${horses.length} 匹</span>
         </div>
       `;
+
+      // 更新本場心水標記提示
+      const currentPicks = horses.filter(h => h.pick).map(h => `${h.no}.${h.name} (${h.pick})`).join(', ');
+      document.getElementById('stat-current-picks').innerText = currentPicks || "未標記";
 
       const list = document.getElementById('horse-list');
       list.innerHTML = horses.map((h, idx) => {
         const key = `${currentMeetingIdx}-${currentRace}-${idx}`;
         const isOpen = !!expandedHorses[key];
 
-        const runsHtml = (h.past_runs || []).map(run => {
-          const pClass = run.place === "1" ? "place-1" : run.place === "2" ? "place-2" : run.place === "3" ? "place-3" : "bg-slate-800 text-slate-300";
-          return `
-            <tr class="border-b border-slate-800/60 text-[10px]">
-              <td class="py-1.5"><span class="w-4 h-4 rounded-full inline-flex items-center justify-center font-black ${pClass}">${run.place}</span></td>
-              <td class="py-1.5 text-slate-400">${run.date}</td>
-              <td class="py-1.5 text-white font-medium">${run.track} ${run.dist}</td>
-              <td class="py-1.5 text-slate-300">${run.draw}檔</td>
-              <td class="py-1.5 font-mono text-emerald-400">${run.pos}</td>
-              <td class="py-1.5 text-slate-300">${run.lbw} (${run.time})</td>
-              <td class="py-1.5 text-right">
-                ${run.replay_url ? `<a href="${run.replay_url}" target="_blank" class="text-amber-400 hover:underline font-bold">▶片</a>` : '-'}
-              </td>
-            </tr>
-          `;
-        }).join('');
+        const runsHtml = (h.past_runs || []).map(run => `
+          <tr class="border-b border-slate-800/60 text-[10px]">
+            <td class="py-1"><span class="w-3.5 h-3.5 rounded-full inline-flex items-center justify-center font-bold ${run.place==='1'?'place-1':run.place==='2'?'place-2':run.place==='3'?'place-3':'bg-slate-800 text-slate-300'}">${run.place}</span></td>
+            <td class="py-1 text-slate-400">${run.date}</td>
+            <td class="py-1 text-white">${run.track} ${run.dist}</td>
+            <td class="py-1 text-slate-300">${run.draw}檔</td>
+            <td class="py-1 font-mono text-emerald-400">${run.pos}</td>
+            <td class="py-1 text-slate-300">${run.lbw}</td>
+            <td class="py-1 text-right">${run.replay_url ? `<a href="${run.replay_url}" target="_blank" class="text-amber-400 font-bold">▶片</a>` : '-'}</td>
+          </tr>
+        `).join('');
 
         const twHtml = (h.trackwork || []).map(tw => `
-          <div class="bg-slate-950/70 p-2 rounded-lg border border-slate-800/80 text-[10px]">
-            <div class="flex justify-between font-bold">
-              <span class="text-emerald-400">⏱️ ${tw.date} · ${tw.type} (${tw.track})</span>
-              <span class="font-mono text-amber-300">${tw.time}</span>
-            </div>
-            <p class="text-slate-300 mt-1">策騎：<strong class="text-white">${tw.rider}</strong> ${tw.note ? '— ' + tw.note : ''}</p>
+          <div class="bg-slate-950 p-1.5 rounded border border-slate-800/80 text-[10px] flex justify-between">
+            <span class="text-slate-300">${tw.date} · ${tw.type} (${tw.rider})</span>
+            <span class="font-mono text-amber-300 font-bold">${tw.time}</span>
           </div>
         `).join('');
 
         return `
-        <div id="horse-card-${idx}" class="glass-card rounded-2xl p-4 border flex flex-col justify-between transition ${h.pick === '◎' ? 'border-rose-500/80 shadow-lg shadow-rose-950/30' : h.pick === '▲' ? 'border-amber-500/80' : 'border-slate-800'}">
-          <div>
-            <div class="flex justify-between items-start">
-              <div class="flex items-center space-x-2.5">
-                <span class="w-7 h-7 rounded-full bg-slate-800 text-white font-black text-xs flex items-center justify-center border border-slate-600 shrink-0">${h.no}</span>
-                <div>
-                  <div class="flex items-center gap-1.5 flex-wrap">
-                    <h4 class="font-black text-base text-white">${h.name}</h4>
-                    ${h.draw && h.draw !== '-' ? `<span class="text-[10px] bg-slate-800 text-emerald-300 px-1.5 py-0.5 rounded border border-slate-700">${h.draw} 檔</span>` : ''}
-                    ${h.gear ? `<span class="text-[10px] bg-purple-500/20 text-purple-300 border border-purple-500/30 px-1.5 py-0.5 rounded font-semibold">${h.gear}</span>` : ''}
-                  </div>
-                  <p class="text-xs text-slate-400 mt-1">
-                    騎：<strong class="text-white">${h.jockey}</strong> (${h.wt}磅) · 練：<strong class="text-slate-200">${h.trainer}</strong> · 評分：${h.rtg}
-                  </p>
+        <div id="horse-card-${idx}" class="glass-card rounded-xl p-3 border transition ${h.pick === '◎' ? 'border-rose-500/80' : h.pick === '▲' ? 'border-amber-500/80' : 'border-slate-800'}">
+          <div class="flex justify-between items-start">
+            <div class="flex items-center space-x-2">
+              <span class="w-6 h-6 rounded-full bg-slate-800 text-white font-black text-xs flex items-center justify-center border border-slate-600 shrink-0">${h.no}</span>
+              <div>
+                <div class="flex items-center gap-1.5">
+                  <h3 class="font-black text-sm text-white">${h.name}</h3>
+                  ${h.draw && h.draw !== '-' ? `<span class="text-[10px] bg-slate-800 text-emerald-300 px-1 py-0.2 rounded border border-slate-700">${h.draw}檔</span>` : ''}
+                  ${h.gear ? `<span class="text-[9px] bg-purple-500/20 text-purple-300 px-1 py-0.2 rounded">${h.gear}</span>` : ''}
                 </div>
+                <p class="text-[11px] text-slate-400 mt-0.5">騎：<strong class="text-slate-200">${h.jockey}</strong> (${h.wt}) · 練：${h.trainer} · 分：${h.rtg}</p>
               </div>
-              ${h.pick ? `<span class="px-2 py-0.5 rounded-lg text-xs font-black bg-emerald-500/20 text-emerald-300 border border-emerald-500/40">${h.pick}</span>` : ''}
             </div>
-
-            <button onclick="toggleDrawer('${key}')" class="mt-3 w-full bg-slate-900 hover:bg-slate-800/90 border border-slate-700/80 rounded-xl py-2 px-3 flex justify-between items-center text-[11px] font-bold text-emerald-400 transition">
-              <span>📊 往績 (${(h.past_runs||[]).length}) · ⏱️ 晨課 (${(h.trackwork||[]).length}) · 🎬 試閘片</span>
-              <span>${isOpen ? '▲ 收起' : '▼ 展開詳情'}</span>
-            </button>
-
-            ${isOpen ? `
-              <div class="mt-3 pt-3 border-t border-slate-800 space-y-3">
-                <div>
-                  <h5 class="text-[11px] font-bold text-white mb-1.5">🎬 賽事與試閘影片直連 (HKJC 官方片庫)</h5>
-                  <div class="grid grid-cols-3 gap-1.5 text-[10px]">
-                    <a href="${h.videos?.bt_video || '#'}" target="_blank" class="bg-indigo-600/20 hover:bg-indigo-600/30 border border-indigo-500/40 text-indigo-300 font-bold py-1.5 px-2 rounded-lg text-center">🐎 試閘片/結果</a>
-                    <a href="${h.videos?.last_race_replay || '#'}" target="_blank" class="bg-rose-600/20 hover:bg-rose-600/30 border border-rose-500/40 text-rose-300 font-bold py-1.5 px-2 rounded-lg text-center">▶️ 上仗重溫片</a>
-                    <a href="${h.videos?.patrol_video || '#'}" target="_blank" class="bg-amber-600/20 hover:bg-amber-600/30 border border-amber-500/40 text-amber-300 font-bold py-1.5 px-2 rounded-lg text-center">🎥 賽事結果庫</a>
-                  </div>
-                </div>
-
-                <div>
-                  <h5 class="text-[11px] font-bold text-white mb-1">📊 近期往績與沿途走位</h5>
-                  <div class="overflow-x-auto custom-scroll">
-                    <table class="w-full text-left border-collapse">
-                      <thead>
-                        <tr class="border-b border-slate-700 text-[9px] text-slate-400">
-                          <th class="pb-1">名次</th><th class="pb-1">日期</th><th class="pb-1">場地/路程</th><th class="pb-1">檔</th><th class="pb-1">沿途走位</th><th class="pb-1">距離 (時間)</th><th class="pb-1 text-right">重溫</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        ${runsHtml || '<tr><td colspan="7" class="py-2 text-center text-slate-500 text-[10px]">暫無本地往績資料 (或屬海外參賽馬)</td></tr>'}
-                      </tbody>
-                    </table>
-                  </div>
-                </div>
-
-                <div>
-                  <h5 class="text-[11px] font-bold text-white mb-1.5">⏱️ 最新晨課操練與大閘表現</h5>
-                  <div class="space-y-1.5">
-                    ${twHtml || '<p class="text-slate-500 text-[10px]">暫無晨課紀錄</p>'}
-                  </div>
-                </div>
-              </div>
-            ` : ''}
+            ${h.pick ? `<span class="px-1.5 py-0.2 rounded text-xs font-black bg-emerald-500/20 text-emerald-300 border border-emerald-500/40">${h.pick}</span>` : ''}
           </div>
 
-          <div class="mt-3 flex items-center justify-between pt-2.5 border-t border-slate-800/60">
-            <span class="text-[10px] text-slate-400">標記心水 (跨裝置同步)：</span>
-            <div class="flex space-x-1.5">
+          <!-- 往績/晨課抽屜 -->
+          <button onclick="toggleDrawer('${key}')" class="mt-2 w-full bg-slate-900/90 hover:bg-slate-800 border border-slate-800 rounded-lg py-1 px-2.5 flex justify-between items-center text-[10px] font-bold text-emerald-400">
+            <span>📊 往績 (${(h.past_runs||[]).length}) · ⏱️ 晨課 (${(h.trackwork||[]).length}) · 🎬 片庫</span>
+            <span>${isOpen ? '▲ 收起' : '▼ 展開'}</span>
+          </button>
+
+          ${isOpen ? `
+            <div class="mt-2 pt-2 border-t border-slate-800 space-y-2">
+              <div class="grid grid-cols-3 gap-1 text-[10px]">
+                <a href="${h.videos?.bt_video || '#'}" target="_blank" class="bg-indigo-600/20 text-indigo-300 py-1 rounded text-center">🐎 試閘片</a>
+                <a href="${h.videos?.last_race_replay || '#'}" target="_blank" class="bg-rose-600/20 text-rose-300 py-1 rounded text-center">▶️ 上仗片</a>
+                <a href="${h.videos?.patrol_video || '#'}" target="_blank" class="bg-amber-600/20 text-amber-300 py-1 rounded text-center">🎥 走位片</a>
+              </div>
+              <div class="overflow-x-auto">
+                <table class="w-full text-left">
+                  <tbody>${runsHtml || '<tr><td class="text-slate-500 text-[10px] py-1">暫無本地往績</td></tr>'}</tbody>
+                </table>
+              </div>
+              <div class="space-y-1">${twHtml || '<p class="text-slate-500 text-[10px]">暫無晨課資料</p>'}</div>
+            </div>
+          ` : ''}
+
+          <!-- 心水標記按鈕 -->
+          <div class="mt-2 flex items-center justify-between pt-1.5 border-t border-slate-800/60">
+            <span class="text-[10px] text-slate-400">心水標記：</span>
+            <div class="flex space-x-1">
               ${['◎ 本命', '○ 配腳', '▲ 黑馬'].map(tag => {
                 const sym = tag.split(' ')[0];
                 const isSelected = h.pick === sym;
-                return `<button onclick="togglePick(${currentRace}, ${idx}, '${sym}')" class="px-2.5 py-1 rounded-lg text-[11px] font-bold transition ${isSelected ? 'bg-emerald-600 text-white shadow' : 'bg-slate-900 text-slate-400 border border-slate-800 hover:text-white'}">${tag}</button>`;
+                return `<button onclick="togglePick(${currentRace}, ${idx}, '${sym}')" class="px-2 py-0.5 rounded text-[10px] font-bold ${isSelected ? 'bg-emerald-600 text-white' : 'bg-slate-900 text-slate-400 border border-slate-800'}">${tag}</button>`;
               }).join('')}
             </div>
           </div>
@@ -748,29 +473,7 @@
       `}).join('');
     }
 
-    function renderSchedule() {
-      const cur = getCurrentMeeting();
-      if (!cur) return;
-      document.getElementById('schedule-count-badge').innerText = `共 ${cur.race_info.length} 場`;
-      const container = document.getElementById('view-schedule');
-      container.innerHTML = cur.race_info.map(race => {
-        const isCurrent = race.r === currentRace;
-        const horseCount = (cur.races[String(race.r)] || []).length;
-        const codeText = race.btn_label || `R${race.r}`;
-        return `
-        <div onclick="selectRace(${race.r})" class="p-2.5 rounded-xl border cursor-pointer transition flex items-center justify-between ${isCurrent ? 'bg-emerald-950/60 border-emerald-500/70' : 'bg-slate-900/60 border-slate-800 hover:border-slate-700'}">
-          <div class="flex items-center space-x-2.5">
-            <div class="px-2.5 py-1 rounded-lg text-xs font-black ${isCurrent ? 'bg-emerald-600 text-white' : 'bg-slate-800 text-slate-300'}">${codeText}</div>
-            <div>
-              <span class="font-bold text-xs text-white block">${race.name}</span>
-              <span class="text-[10px] text-slate-400">${race.time !== '-' ? race.time + ' · ' : ''}${race.cls !== '-' ? race.cls + ' · ' : ''}${race.dist}</span>
-            </div>
-          </div>
-          <span class="text-[11px] font-bold text-emerald-400 shrink-0">${horseCount} 匹 ›</span>
-        </div>
-      `}).join('');
-    }
-
+    // ==================== 4. 心水飛與跨裝置同步 ====================
     async function togglePick(raceNo, horseIdx, symbol) {
       const cur = getCurrentMeeting();
       if (!cur) return;
@@ -781,31 +484,44 @@
       horse.pick = horse.pick === symbol ? "" : symbol;
 
       const pk = getPickKey(cur.id, raceNo, horse.no);
-      if (horse.pick) {
-        userPicksMap[pk] = horse.pick;
-      } else {
-        delete userPicksMap[pk];
-      }
+      if (horse.pick) userPicksMap[pk] = horse.pick;
+      else delete userPicksMap[pk];
 
-      updateDashboardStats();
+      localStorage.setItem('horse_pro_picks', JSON.stringify(userPicksMap));
+      updatePickBadge();
       renderRaceCard();
-      await pushPicksToCloud();
+
+      if (currentUser) {
+        try {
+          await fetch('/api/sync_picks', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ username: currentUser.username, pin: currentUser.pin, picks: userPicksMap })
+          });
+        } catch (e) {}
+      }
     }
 
-    function updateDashboardStats() {
-      const cur = getCurrentMeeting();
-      if (!cur) return;
-      let banker = "未選擇", darkhorse = "未選擇", total = 0;
-      Object.keys(cur.races || {}).forEach(r => {
-        (cur.races[r] || []).forEach(h => {
-          if (h.pick) total++;
-          if (h.pick === '◎') banker = `R${r} ${h.no}.${h.name}`;
-          if (h.pick === '▲') darkhorse = `R${r} ${h.no}.${h.name}`;
+    function updatePickBadge() {
+      let total = 0;
+      allMeetingsData.forEach(m => {
+        Object.keys(m.races || {}).forEach(r => {
+          (m.races[r] || []).forEach(h => { if (h.pick) total++; });
         });
       });
-      document.getElementById('stat-banker').innerText = banker;
-      document.getElementById('stat-darkhorse').innerText = darkhorse;
-      document.getElementById('stat-total').innerText = `${total} 匹`;
+      document.getElementById('stat-total-badge').innerText = total;
+    }
+
+    function syncPicksToMeetings() {
+      allMeetingsData.forEach(m => {
+        Object.keys(m.races || {}).forEach(r => {
+          (m.races[r] || []).forEach(h => {
+            const pk = getPickKey(m.id, r, h.no);
+            h.pick = userPicksMap[pk] || h.pick || "";
+          });
+        });
+      });
+      updatePickBadge();
     }
 
     function showMyPicksModal() {
@@ -818,34 +534,89 @@
             if (h.pick) {
               const rPrefix = m.is_simulcast ? `${m.course}-R${r}` : `第 ${r} 場`;
               html += `
-                <div onclick="closeMyPicksModal(); jumpToHorse(${mIdx}, ${r}, ${hIdx});" class="bg-slate-900 hover:border-emerald-500 cursor-pointer p-3 rounded-xl border border-slate-800 flex justify-between items-center transition">
+                <div onclick="closeMyPicksModal(); jumpToHorse(${mIdx}, ${r}, ${hIdx});" class="bg-slate-900 p-2.5 rounded-xl border border-slate-800 flex justify-between items-center">
                   <div>
                     <span class="text-[10px] text-slate-400 block">${m.label} · ${rPrefix}</span>
-                    <span class="font-bold text-white text-xs">${h.no}號 ${h.name}</span> <span class="text-[11px] text-slate-400">(${h.jockey} / ${h.trainer})</span>
+                    <span class="font-bold text-white text-xs">${h.no}號 ${h.name}</span> <span class="text-[10px] text-slate-400">(${h.jockey})</span>
                   </div>
-                  <span class="px-2.5 py-1 bg-rose-500/20 text-rose-300 border border-rose-500/30 rounded-lg font-black text-xs">${h.pick}</span>
+                  <span class="px-2 py-0.5 bg-rose-500/20 text-rose-300 rounded font-bold text-xs">${h.pick}</span>
                 </div>`;
             }
           });
         });
       });
-      content.innerHTML = html || '<p class="text-slate-400 text-center py-6">暫時未揀選任何心水馬匹！</p>';
+      content.innerHTML = html || '<p class="text-slate-400 text-center py-4">暫時未標記任何心水！</p>';
       modal.classList.remove('hidden');
     }
-
     function closeMyPicksModal() { document.getElementById('picks-modal').classList.add('hidden'); }
+
+    // ==================== 5. 帳號登入 ====================
+    function updateUserUI() {
+      const label = document.getElementById('user-display-label');
+      const logoutBtn = document.getElementById('btn-logout');
+      if (currentUser) {
+        label.innerText = `👤 ${currentUser.display_name}`;
+        logoutBtn.classList.remove('hidden');
+      } else {
+        label.innerText = '👤 登入';
+        logoutBtn.classList.add('hidden');
+      }
+    }
+
+    function openLoginModal() {
+      if (currentUser) document.getElementById('login-username').value = currentUser.username;
+      document.getElementById('login-modal').classList.remove('hidden');
+    }
+    function closeLoginModal() { document.getElementById('login-modal').classList.add('hidden'); }
+
+    async function submitLogin() {
+      const username = document.getElementById('login-username').value.trim();
+      const pin = document.getElementById('login-pin').value.trim();
+      if (!username || !pin) return alert('請輸入帳號與密碼');
+
+      try {
+        const res = await fetch('/api/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ username, pin })
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.detail);
+
+        currentUser = { username: data.username, display_name: data.display_name, pin };
+        userPicksMap = { ...userPicksMap, ...(data.picks || {}) };
+        localStorage.setItem('horse_pro_user', JSON.stringify(currentUser));
+        localStorage.setItem('horse_pro_picks', JSON.stringify(userPicksMap));
+
+        syncPicksToMeetings();
+        updateUserUI();
+        renderAll();
+        closeLoginModal();
+        alert('✅ 登入成功！心水已同步');
+      } catch (e) {
+        // 單機本地模式
+        currentUser = { username, display_name: username, pin };
+        localStorage.setItem('horse_pro_user', JSON.stringify(currentUser));
+        updateUserUI();
+        closeLoginModal();
+      }
+    }
+
+    function logoutUser() {
+      currentUser = null;
+      localStorage.removeItem('horse_pro_user');
+      updateUserUI();
+      closeLoginModal();
+    }
 
     function renderAll() {
       renderMeetingSelector();
+      renderRaceSelector();
       renderRaceCard();
-      renderSchedule();
-      updateDashboardStats();
     }
 
-    // 初始化：更新登入狀態 + 綁定滾輪橫向 Scroll + 自動從後端讀取 JSON
+    // 初始化啟動
     updateUserUI();
-    enableWheelHorizontalScroll('meeting-selector');
-    enableWheelHorizontalScroll('race-selector-scroll');
     autoLoadFromServer();
   </script>
 </body>
